@@ -9,6 +9,19 @@ import Foundation
 import UIKit
 import Telegraph
 import Zip
+import SwiftUI
+import SafariServices
+
+struct SafariWebView: UIViewControllerRepresentable {
+    let url: URL
+    
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        return SFSafariViewController(url: url)
+    }
+    
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {
+    }
+}
 
 func downgradeAppToVersion(appId: String, versionId: String, ipaTool: IPATool) {
     let path = ipaTool.downloadIPAForVersion(appId: appId, appVerId: versionId)
@@ -35,6 +48,9 @@ func downgradeAppToVersion(appId: String, versionId: String, ipaTool: IPATool) {
     let appVersion = infoPlist["CFBundleShortVersionString"] as! String
     print("appBundleId: \(appBundleId)")
     print("appVersion: \(appVersion)")
+
+    let finalURL = "https://api.palera.in/genPlist?bundleid=\(appBundleId)&name=\(appBundleId)&version=\(appVersion)&fetchurl=http://127.0.0.1:9090/signed.ipa"
+    let installURL = "itms-services://?action=download-manifest&url=" + finalURL.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
     
     DispatchQueue.global(qos: .background).async {
         let server = Server()
@@ -44,15 +60,31 @@ func downgradeAppToVersion(appId: String, versionId: String, ipaTool: IPATool) {
             let signedIPAData = try Data(contentsOf: destinationUrl)
             return HTTPResponse(body: signedIPAData)
         })
+
+        server.route(.GET, "install", { _ in
+            print("Serving install page")
+            let installPage = """
+            <script type="text/javascript">
+                window.location = "\(installURL)"
+            </script>
+            """
+            return HTTPResponse(.ok, headers: ["Content-Type": "text/html"], content: installPage)
+        })
         
         try! server.start(port: 9090)
         print("Server has started listening")
         
         DispatchQueue.main.async {
             print("Requesting app install")
-            let finalURL = "https://api.palera.in/genPlist?bundleid=\(appBundleId)&name=\(appBundleId)&version=\(appVersion)&fetchurl=http://127.0.0.1:9090/signed.ipa"
-            let finalURLfr = "itms-services://?action=download-manifest&url=" + finalURL.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
-            UIApplication.shared.open(URL(string: finalURLfr)!)
+            let majoriOSVersion = Int(UIDevice.current.systemVersion.components(separatedBy: ".").first!)!
+            if majoriOSVersion >= 18 {
+                // iOS 18+ ( idk why this is needed but it seems to fix it for some people )
+                let safariView = SafariWebView(url: URL(string: "http://127.0.0.1:9090/install")!)
+                UIApplication.shared.windows.first?.rootViewController?.present(UIHostingController(rootView: safariView), animated: true, completion: nil)
+            } else {
+                // iOS 17-
+                UIApplication.shared.open(URL(string: installURL)!)
+            }
         }
         
         while server.isRunning {
