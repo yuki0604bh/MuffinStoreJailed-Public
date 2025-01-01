@@ -72,7 +72,13 @@ struct ContentView: View {
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .padding()
                 Button("Authenticate") {
-                    if appleId.isEmpty || password.isEmpty || code.isEmpty {
+                    if appleId.isEmpty || password.isEmpty {
+                        return
+                    }
+                    if code.isEmpty {
+                        // we can just try to log in and it'll request a code, very scuffed tho.
+                        ipaTool = IPATool(appleId: appleId, password: password)
+                        ipaTool?.authenticate(requestCode: true)
                         return
                     }
                     let finalPassword = password + code

@@ -110,7 +110,7 @@ class StoreClient {
         return false
     }
 
-    func authenticate() -> Bool {
+    func authenticate(requestCode: Bool = false) -> Bool {
         if self.guid == nil {
             self.guid = generateGuid(appleId: appleId)
         }
@@ -184,6 +184,10 @@ class StoreClient {
                 sleep(1)
             }
             if ret {
+                break
+            }
+            if requestCode {
+                ret = false
                 break
             }
         }
@@ -284,11 +288,10 @@ class IPATool {
         storeClient = StoreClient(appleId: appleId, password: password)
     }
 
-    func authenticate() -> Bool {
+    func authenticate(requestCode: Bool = false) -> Bool {
         print("Authenticating to iTunes Store...")
         if !storeClient.tryLoadAuthInfo() {
-            // storeClient.authenticate()
-            return storeClient.authenticate()
+            return storeClient.authenticate(requestCode: requestCode)
         } else {
             return true
         }
