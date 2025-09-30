@@ -123,7 +123,7 @@ class StoreClient {
             "why": "signIn"
         ]
 
-        var url = URL(string: "https://buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate")!
+        var url = URL(string: "https://p44-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.allHTTPHeaderFields = [
